@@ -3,11 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Task scheduling and system health API for QC-TaskManagerapp
 servers:
   - url: /api
     description: Base API path
 tags:
+  - name: tasks
+    description: Task management
+  - name: dashboard
+    description: Dashboard summaries
   - name: health
     description: Health operations
 paths:
@@ -24,13 +28,401 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /health:
+    get:
+      operationId: getSystemHealth
+      tags: [health]
+      summary: Detailed system status
+      responses:
+        "200":
+          description: Current application status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemHealth"
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [scheduled, completed, overdue, all]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a scheduled task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid task input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task details
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task and its schedule
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid task input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "204":
+          description: Task deleted
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Mark a task completed
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Completed task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{id}/reschedule:
+    post:
+      operationId: rescheduleTask
+      tags: [tasks]
+      summary: Reschedule a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "200":
+          description: Rescheduled task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{id}/snooze:
+    post:
+      operationId: snoozeTask
+      tags: [tasks]
+      summary: Snooze a task reminder
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SnoozeInput"
+      responses:
+        "200":
+          description: Snoozed task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid snooze duration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /reminders:
+    get:
+      operationId: listReminders
+      tags: [tasks]
+      summary: List reminders ready for browser display
+      responses:
+        "200":
+          description: Pending reminders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
 components:
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
-
+        httpStatus:
+          type: integer
+      required: [status, httpStatus]
+    SystemHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, warning, error]
+        httpStatus:
+          type: integer
+        database:
+          type: string
+          enum: [connected, disconnected]
+        scheduler:
+          type: string
+          enum: [running, stopped]
+        scheduledJobs:
+          type: integer
+        responseTimeMs:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        lastSuccessfulCheck:
+          type: string
+          format: date-time
+      required: [status, httpStatus, database, scheduler, scheduledJobs, responseTimeMs, timestamp, lastSuccessfulCheck]
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        task:
+          type: string
+        scheduledDate:
+          type: string
+        scheduledTime:
+          type: string
+        scheduledDatetime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, completed, overdue]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        lastNotifiedAt:
+          type: ["string", "null"]
+          format: date-time
+        reminderReady:
+          type: boolean
+      required: [id, task, scheduledDate, scheduledTime, scheduledDatetime, status, createdAt, updatedAt, completedAt, lastNotifiedAt, reminderReady]
+    TaskInput:
+      type: object
+      properties:
+        task:
+          type: string
+          minLength: 1
+          maxLength: 500
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        scheduledTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+      required: [task, scheduledDate, scheduledTime]
+    TaskUpdate:
+      type: object
+      properties:
+        task:
+          type: string
+          minLength: 1
+          maxLength: 500
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        scheduledTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+      required: [task, scheduledDate, scheduledTime]
+    ScheduleInput:
+      type: object
+      properties:
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        scheduledTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+      required: [scheduledDate, scheduledTime]
+    SnoozeInput:
+      type: object
+      properties:
+        minutes:
+          type: integer
+          enum: [5, 10, 30]
+      required: [minutes]
+    Dashboard:
+      type: object
+      properties:
+        counts:
+          type: object
+          properties:
+            scheduled:
+              type: integer
+            upcoming:
+              type: integer
+            completed:
+              type: integer
+            overdue:
+              type: integer
+          required: [scheduled, upcoming, completed, overdue]
+        today:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        overdue:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        completed:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+      required: [counts, today, upcoming, overdue, completed]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

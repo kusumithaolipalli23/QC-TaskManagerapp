@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "QC-TaskManagerapp"
+description = "A production-ready task scheduling dashboard for creating, rescheduling, completing, and monitoring timed work with live reminders and system health visibility."
+version = "1.0.0"
+id = "artifacts/qc-taskmanagerapp"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18873
+
+[services.development]
+run = "pnpm --filter @workspace/qc-taskmanagerapp run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/qc-taskmanagerapp", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/qc-taskmanagerapp/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18873"
+BASE_PATH = "/"

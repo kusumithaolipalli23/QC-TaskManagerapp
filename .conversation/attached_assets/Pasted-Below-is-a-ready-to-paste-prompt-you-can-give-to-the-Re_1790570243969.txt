@@ -1,0 +1,952 @@
+Below is a ready-to-paste prompt you can give to the Replit AI Agent. I’ve made it explicit about architecture, UI, database, scheduling, reminders, live HTTP status, CRUD behavior, and deployment so the agent has fewer ambiguities.
+
+ You are an expert full-stack Python developer and DevOps engineer. Build, test, and deploy a production-ready Flask web application named **QC-TaskManagerapp**.
+
+ ## 1\. Application Objective
+
+ Build a task-management web application where users can:
+
+ - Create tasks with a task description/name, date, and time.
+- Schedule tasks for future execution/reminders.
+- See scheduled, upcoming, and completed tasks from a dashboard.
+- Receive a popup/browser reminder when a scheduled task reaches its scheduled date and time.
+- Click any task to view its details.
+- Edit/update an existing task.
+- Reschedule a task.
+- Delete a task.
+- Mark tasks as completed.
+- See live HTTP status/response information on the webpage.
+- Run a background job queue/scheduler so scheduled tasks are processed automatically.
+- Deploy the completed application so it is accessible through a live public URL.
+
+ Use clean, maintainable code and organize the project as a real Flask application rather than putting everything into one Python file.
+
+---
+
+ # 2\. Required Technology Stack
+
+ Use ONLY the following primary stack unless a dependency is genuinely required:
+
+ - **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript
+- **Backend:** Python 3 + Flask
+- **Database:** SQLite3
+- **Templating:** Jinja2
+- **Scheduling / Job Queue:** Python-based background scheduler/queue suitable for deployment
+- **Web server:** Flask-compatible production server such as Gunicorn where supported by the deployment platform
+
+ Avoid introducing React, Node.js, MongoDB, PostgreSQL, or other unnecessary technologies.
+
+ The application should remain simple enough to run locally with SQLite and deploy easily.
+
+---
+
+ # 3\. Application Name
+
+ Display the application name throughout the UI as:
+
+ **QC-TaskManagerapp**
+
+ Use a clean professional dashboard style.
+
+---
+
+ # 4\. Core Workflow
+
+ Implement this workflow:
+
+ ### Workflow 1 — Task Management CRUD
+
+ Users must be able to:
+
+ 1. Create a task.
+2. Read/view tasks.
+3. Update a task.
+4. Reschedule a task.
+5. Delete a task.
+6. Mark a task as completed.
+
+ Each task should contain at least:
+
+ - `id`
+- `task`
+- `scheduled_date`
+- `scheduled_time`
+- `scheduled_datetime`
+- `status`
+- `created_at`
+- `updated_at`
+- `completed_at`
+
+ Possible task statuses:
+
+ - `Scheduled`
+- `Completed`
+- `Overdue`
+
+ Use a consistent internal representation for status.
+
+---
+
+ # 5\. Dashboard
+
+ Create a responsive Bootstrap dashboard.
+
+ The dashboard should have summary cards such as:
+
+ ### Scheduled Tasks
+
+ Number of currently scheduled tasks.
+
+ ### Upcoming Tasks
+
+ Number of future tasks that have not yet been completed.
+
+ ### Completed Tasks
+
+ Number of completed tasks.
+
+ ### Overdue Tasks
+
+ Number of scheduled tasks whose time has passed without completion.
+
+ Below the summary cards, display task lists/tables.
+
+ Suggested sections:
+
+ - Today's Tasks
+- Upcoming Tasks
+- Completed Tasks
+- Overdue Tasks
+
+ Each task row should show:
+
+ - Task name
+- Scheduled date
+- Scheduled time
+- Status
+- Created time
+- Action buttons
+
+ Action buttons:
+
+ - View
+- Edit
+- Reschedule
+- Complete
+- Delete
+
+ Make the dashboard responsive on desktop, tablet, and mobile.
+
+---
+
+ # 6\. Create Task
+
+ Provide a prominent **Add Task** button.
+
+ The create-task form should contain:
+
+ ### Task
+
+ Text input or textarea.
+
+ ### Date
+
+ Date picker.
+
+ ### Time
+
+ Time picker.
+
+ ### Submit
+
+ Button such as:
+
+ **Schedule Task**
+
+ Validate:
+
+ - Task cannot be empty.
+- Date cannot be invalid.
+- Time cannot be invalid.
+- Scheduled date/time must be handled correctly.
+- Prevent accidental scheduling with malformed input.
+
+ After successfully creating a task:
+
+ - Save it to SQLite.
+- Add/register it with the background scheduler/job queue.
+- Show a Bootstrap success notification.
+- Redirect the user back to the dashboard.
+
+---
+
+ # 7\. Task Details
+
+ When a user clicks a task, show a task details page or Bootstrap modal.
+
+ Display:
+
+ - Task ID
+- Task description
+- Scheduled date
+- Scheduled time
+- Status
+- Created timestamp
+- Updated timestamp
+- Completed timestamp, if applicable
+
+ Provide buttons for:
+
+ - Edit
+- Reschedule
+- Mark Complete
+- Delete
+- Back to Dashboard
+
+---
+
+ # 8\. Edit and Reschedule
+
+ Users must be able to edit an existing task.
+
+ When editing:
+
+ - Load the existing task values.
+- Allow the task text to be changed.
+- Allow date/time to be changed.
+- Validate the new values.
+- Update SQLite.
+- Remove/update the old scheduled job.
+- Register the new scheduled job.
+- Display a success message.
+
+ Rescheduling must work correctly even if the task already had a previously scheduled job.
+
+ Do NOT create duplicate scheduler jobs when a task is updated or rescheduled.
+
+ Use the task database ID as the unique scheduler job identifier.
+
+---
+
+ # 9\. Delete Task
+
+ When the user selects Delete:
+
+ - Display a confirmation dialog/modal.
+- If confirmed, remove the task from SQLite.
+- Remove the corresponding scheduled job from the job queue/scheduler.
+- Return to the dashboard.
+- Display a success message.
+
+ Handle the case where the scheduler job no longer exists gracefully.
+
+---
+
+ # 10\. Complete Task
+
+ When a user marks a task as completed:
+
+ - Change status to `Completed`.
+- Store `completed_at`.
+- Remove the pending scheduled job if it exists.
+- Update the dashboard counters.
+- Display a success message.
+
+ A completed task should not trigger a future reminder.
+
+---
+
+ # 11\. Background Job Queue / Scheduler
+
+ This is a critical requirement.
+
+ Implement a background scheduler/job queue that monitors scheduled tasks.
+
+ When a task is created:
+
+```
+User creates task
+        ↓
+Save task to SQLite
+        ↓
+Create scheduler/job entry
+        ↓
+Wait until scheduled date/time
+        ↓
+Execute reminder job
+        ↓
+Notify browser/user
+        ↓
+Update task state
+```
+
+ Use a Python scheduling/background-job solution that is compatible with Flask deployment.
+
+ Possible implementation:
+
+ - APScheduler or another lightweight Python scheduler.
+
+ Do not use a scheduler that requires a separate complex infrastructure unless necessary.
+
+ The scheduler must:
+
+ - Load pending scheduled tasks when the application starts.
+- Schedule newly created tasks immediately.
+- Remove/update jobs when tasks are deleted/rescheduled/completed.
+- Avoid duplicate jobs.
+- Recover scheduled jobs after application restart by loading them from SQLite.
+- Handle exceptions without crashing the Flask application.
+
+ Important:
+
+ The database must remain the source of truth. Do not rely only on in-memory scheduler state.
+
+---
+
+ # 12\. Browser Popup Reminder
+
+ When the scheduled time is reached, the user should receive a visible reminder.
+
+ Implement this using browser-compatible JavaScript.
+
+ Preferred behavior:
+
+ 1. Backend scheduler detects the scheduled task.
+2. Backend marks the task as ready for notification.
+3. Frontend periodically checks the server for pending reminders using AJAX/fetch.
+4. If a reminder is available, show a Bootstrap modal or browser notification.
+
+ Example:
+
+```
+🔔 Task Reminder
+
+Task: Submit QC Report
+
+Scheduled Time:
+10:30 AM
+
+[Mark Completed] [Snooze] [Close]
+```
+
+ The reminder should be highly visible.
+
+ Do not rely exclusively on a Python process directly controlling the browser, because the browser is a separate client.
+
+ If browser notification permissions are supported, optionally use the Web Notifications API, but the Bootstrap modal must remain the fallback.
+
+---
+
+ # 13\. Snooze Functionality
+
+ If practical, add a **Snooze** option to the reminder.
+
+ Suggested options:
+
+ - 5 minutes
+- 10 minutes
+- 30 minutes
+
+ When snoozed:
+
+ - Update the task's next scheduled time.
+- Update the scheduler job.
+- Do not create duplicate jobs.
+
+ If implementing Snooze adds unnecessary complexity, keep it as an optional feature rather than blocking the core application.
+
+---
+
+ # 14\. Live HTTP Status and Response Page
+
+ The application must have a section/page called something like:
+
+ **System Status**
+
+ Display live HTTP/application status information.
+
+ Show:
+
+ - Application status
+- HTTP status code
+- Server response time
+- Current server time
+- Database connectivity status
+- Scheduler status
+- Number of scheduled jobs
+- Last successful health check
+- API response status
+
+ Create a backend health endpoint such as:
+
+```
+/health
+```
+
+ The endpoint should return JSON similar to:
+
+```
+{
+  "status": "healthy",
+  "http_status": 200,
+  "database": "connected",
+  "scheduler": "running",
+  "timestamp": "..."
+}
+```
+
+ Create a frontend status panel that periodically calls `/health` using JavaScript `fetch()`.
+
+ Display something like:
+
+```
+System Status: ONLINE
+HTTP Status: 200
+Database: CONNECTED
+Scheduler: RUNNING
+Response Time: 42 ms
+Last Checked: 10:30:25
+```
+
+ Use Bootstrap badges/colors:
+
+ - Green = healthy/online
+- Yellow = warning
+- Red = error/offline
+
+ Do not fake HTTP status values. Display actual responses received from the backend.
+
+---
+
+ # 15\. REST/API Endpoints
+
+ Where appropriate, create clean Flask routes/API endpoints.
+
+ Suggested routes:
+
+```
+GET     /
+GET     /tasks
+GET     /tasks/<id>
+GET     /tasks/create
+POST    /tasks/create
+GET     /tasks/<id>/edit
+POST    /tasks/<id>/edit
+POST    /tasks/<id>/complete
+POST    /tasks/<id>/delete
+POST    /tasks/<id>/reschedule
+
+GET     /api/tasks
+GET     /api/tasks/upcoming
+GET     /api/reminders
+POST    /api/tasks/<id>/snooze
+
+GET     /health
+```
+
+ You may adjust the route structure if a cleaner Flask design is appropriate.
+
+ Return proper HTTP status codes.
+
+ For API errors, return useful JSON responses.
+
+---
+
+ # 16\. SQLite Database
+
+ Create the SQLite database automatically if it does not exist.
+
+ Use a clean schema.
+
+ Suggested table:
+
+```
+tasks
+-----
+id
+task
+scheduled_datetime
+status
+created_at
+updated_at
+completed_at
+last_notified_at
+```
+
+ You may use separate date/time fields if useful, but avoid unnecessary duplication.
+
+ Use parameterized SQL queries or a clean SQLite abstraction.
+
+ Do not construct SQL queries by unsafe string concatenation.
+
+ Create indexes where useful, particularly for:
+
+ - status
+- scheduled\_datetime
+
+---
+
+ # 17\. Date and Time Handling
+
+ This is very important.
+
+ Use a consistent timezone strategy.
+
+ Prefer:
+
+ - Store timestamps in UTC where practical.
+- Convert to the user's configured/local display timezone in the UI.
+
+ If the application is intended for a single timezone, make the timezone configurable through an environment variable such as:
+
+```
+APP_TIMEZONE=Asia/Kolkata
+```
+
+ Do not hard-code timezone assumptions throughout the application.
+
+ Clearly document how date/time is handled.
+
+ The scheduler and frontend must agree on the same interpretation of scheduled time.
+
+---
+
+ # 18\. UI/UX Requirements
+
+ Use Bootstrap 5.
+
+ Design should be:
+
+ - Clean
+- Modern
+- Professional
+- Responsive
+- Easy to understand
+- Mobile-friendly
+
+ Suggested layout:
+
+```
+------------------------------------------------
+ QC-TaskManagerapp             Dashboard
+                              Add Task
+------------------------------------------------
+
+ [ Scheduled ] [ Upcoming ] [ Completed ] [ Overdue ]
+
+------------------------------------------------
+ Today's Tasks
+------------------------------------------------
+ Task       Date       Time       Status   Actions
+
+------------------------------------------------
+ Upcoming Tasks
+------------------------------------------------
+ Task       Date       Time       Status   Actions
+```
+
+ Use:
+
+ - Bootstrap Navbar
+- Bootstrap Cards
+- Bootstrap Tables
+- Bootstrap Buttons
+- Bootstrap Badges
+- Bootstrap Modals
+- Bootstrap Alerts
+- Bootstrap Forms
+
+ Use icons if useful, but avoid unnecessary external dependencies.
+
+---
+
+ # 19\. Navigation
+
+ Navbar should contain:
+
+ - QC-TaskManagerapp
+- Dashboard
+- Tasks
+- Add Task
+- System Status
+
+ Highlight the active page.
+
+---
+
+ # 20\. Error Handling
+
+ Implement proper error handling.
+
+ Handle:
+
+ - Invalid task ID
+- Missing task
+- Invalid date
+- Invalid time
+- Database errors
+- Scheduler errors
+- API errors
+- 404 pages
+- 500 pages
+
+ Create friendly Bootstrap-based error pages.
+
+ Do not expose stack traces or sensitive information in production.
+
+ Log exceptions appropriately.
+
+---
+
+ # 21\. Security
+
+ Even though this is a simple task manager, follow basic security practices.
+
+ Implement:
+
+ - Server-side input validation.
+- Parameterized SQLite queries.
+- CSRF protection for forms if feasible.
+- Safe HTML escaping through Jinja2.
+- No secrets hard-coded in source code.
+- Environment variables for configuration.
+- Secure production configuration.
+- Do not expose internal exception details to users.
+
+ If authentication is not required by this specification, do not add unnecessary authentication complexity.
+
+---
+
+ # 22\. Project Structure
+
+ Use a maintainable structure similar to:
+
+```
+QC-TaskManagerapp/
+│
+├── app/
+│   ├── __init__.py
+│   ├── routes.py
+│   ├── models.py
+│   ├── database.py
+│   ├── scheduler.py
+│   ├── config.py
+│   │
+│   ├── templates/
+│   │   ├── base.html
+│   │   ├── dashboard.html
+│   │   ├── tasks.html
+│   │   ├── task_detail.html
+│   │   ├── task_form.html
+│   │   ├── status.html
+│   │   ├── 404.html
+│   │   └── 500.html
+│   │
+│   └── static/
+│       ├── css/
+│       │   └── style.css
+│       └── js/
+│           ├── app.js
+│           ├── dashboard.js
+│           └── notifications.js
+│
+├── instance/
+│   └── tasks.db
+│
+├── tests/
+│   ├── test_tasks.py
+│   ├── test_api.py
+│   └── test_health.py
+│
+├── requirements.txt
+├── run.py
+├── Procfile
+├── README.md
+├── .env.example
+└── .gitignore
+```
+
+ You may modify the structure if there is a better Flask architecture, but keep concerns separated.
+
+---
+
+ # 23\. Configuration
+
+ Use environment variables where appropriate.
+
+ Example:
+
+```
+FLASK_ENV
+SECRET_KEY
+DATABASE_PATH
+APP_TIMEZONE
+```
+
+ Provide:
+
+```
+.env.example
+```
+
+ Never commit actual secrets.
+
+---
+
+ # 24\. Testing Requirements
+
+ Before deployment, test the application thoroughly.
+
+ At minimum test:
+
+ ### Task creation
+
+ - Create valid task.
+- Reject invalid task.
+- Reject invalid date/time.
+
+ ### Task retrieval
+
+ - Dashboard loads.
+- Task details load.
+- Nonexistent task returns 404.
+
+ ### Task update
+
+ - Edit task.
+- Change date/time.
+- Verify scheduler updates.
+
+ ### Rescheduling
+
+ - Reschedule task.
+- Verify old job is removed.
+- Verify new job exists.
+
+ ### Completion
+
+ - Mark task completed.
+- Verify completed timestamp.
+- Verify reminder is not triggered.
+
+ ### Deletion
+
+ - Delete task.
+- Verify database record removed.
+- Verify scheduler job removed.
+
+ ### Scheduler
+
+ - Create future task.
+- Verify job registration.
+- Verify application restart reloads pending tasks.
+- Verify reminder state is generated at the appropriate time.
+
+ ### Health
+
+ Verify:
+
+```
+GET /health
+```
+
+ returns an appropriate HTTP response and accurate system information.
+
+---
+
+ # 25\. Logging
+
+ Implement useful logging for:
+
+ - Application startup
+- Database initialization
+- Task creation
+- Task updates
+- Task deletion
+- Task completion
+- Scheduler registration
+- Scheduler execution
+- Reminder creation
+- Scheduler exceptions
+- Health-check failures
+
+ Do not log passwords, secrets, or sensitive information.
+
+---
+
+ # 26\. Production Deployment
+
+ After implementing the application:
+
+ 1. Install dependencies.
+2. Initialize the SQLite database.
+3. Run tests.
+4. Run the Flask app locally.
+5. Test all major workflows.
+6. Fix any errors.
+7. Configure the production server.
+8. Deploy the application using the supported Replit deployment mechanism.
+9. Verify the live URL.
+10. Test the live application.
+
+ The final deployment must be accessible through a public HTTPS URL.
+
+ Make sure the application listens on the host/port expected by the deployment environment.
+
+ Do not hard-code:
+
+```
+127.0.0.1
+```
+
+ or a development-only port.
+
+ Use the deployment-provided `PORT` environment variable where appropriate.
+
+---
+
+ # 27\. Production Scheduler Consideration
+
+ Pay special attention to the scheduler during deployment.
+
+ A common deployment problem is that a background scheduler inside a web process can create duplicate scheduler instances when multiple worker processes are used.
+
+ Design the deployment so that:
+
+ - Only one scheduler instance handles scheduled jobs.
+- Duplicate reminders are prevented.
+- Restarting the application does not create duplicate jobs.
+- Existing pending tasks are recovered from SQLite.
+- The application continues functioning after restart.
+
+ If the chosen Replit deployment architecture requires a different scheduler strategy, adapt the implementation accordingly while preserving the required behavior.
+
+---
+
+ # 28\. README
+
+ Create a detailed `README.md` containing:
+
+ - Application overview
+- Features
+- Tech stack
+- Project structure
+- Local setup
+- Installation commands
+- Database setup
+- Environment variables
+- Running locally
+- Running tests
+- Scheduler explanation
+- Reminder architecture
+- Health API
+- Deployment instructions
+- Production considerations
+- Known limitations
+
+ Include exact commands where possible.
+
+---
+
+ # 29\. Final Acceptance Criteria
+
+ Do not consider the project complete until all of the following work:
+
+ - [ ] Flask application starts successfully.
+- [ ] Bootstrap UI loads correctly.
+- [ ] SQLite database initializes automatically.
+- [ ] User can create a task.
+- [ ] User can view tasks.
+- [ ] User can edit a task.
+- [ ] User can reschedule a task.
+- [ ] User can delete a task.
+- [ ] User can mark a task completed.
+- [ ] Dashboard shows scheduled tasks.
+- [ ] Dashboard shows upcoming tasks.
+- [ ] Dashboard shows completed tasks.
+- [ ] Dashboard shows overdue tasks.
+- [ ] Background scheduler starts successfully.
+- [ ] Scheduled tasks are registered with the scheduler.
+- [ ] Scheduler reloads pending tasks after restart.
+- [ ] Duplicate scheduler jobs are prevented.
+- [ ] Reminder is generated when scheduled time is reached.
+- [ ] Browser receives/displays the reminder.
+- [ ] Completed tasks do not trigger reminders.
+- [ ] Deleted tasks do not trigger reminders.
+- [ ] Rescheduled tasks use the new schedule.
+- [ ] `/health` returns actual application status.
+- [ ] Frontend displays live HTTP/health status.
+- [ ] Error pages work.
+- [ ] Tests pass.
+- [ ] Production configuration works.
+- [ ] Application is deployed successfully.
+- [ ] Public HTTPS URL works.
+- [ ] Live deployment has been tested end-to-end.
+
+---
+
+ # 30\. How You Should Work
+
+ Act as an autonomous senior developer.
+
+ Do NOT simply generate code and stop.
+
+ Follow this sequence:
+
+```
+Analyze requirements
+        ↓
+Create project structure
+        ↓
+Implement database
+        ↓
+Implement Flask backend
+        ↓
+Implement CRUD
+        ↓
+Implement scheduler/job queue
+        ↓
+Implement reminder mechanism
+        ↓
+Implement dashboard
+        ↓
+Implement live health/status page
+        ↓
+Implement responsive Bootstrap UI
+        ↓
+Write tests
+        ↓
+Run tests
+        ↓
+Fix errors
+        ↓
+Run application locally
+        ↓
+Test complete workflow
+        ↓
+Configure production deployment
+        ↓
+Deploy
+        ↓
+Verify live HTTPS application
+        ↓
+Provide final deployment URL
+```
+
+ When you encounter an error, diagnose the root cause and fix it rather than simply reporting the error.
+
+ Do not leave TODO placeholders for core functionality.
+
+ Do not claim deployment succeeded unless you have actually verified the live application.
+
+ At the end, provide:
+
+ 1. Final project structure.
+2. Features implemented.
+3. Test results.
+4. Deployment status.
+5. Live application URL.
+6. Any environment variables that must be configured.
+7. Any important production limitations or scheduler considerations.
+
+ A particularly important part of this prompt is the **scheduler + browser reminder architecture**. A Flask backend cannot directly make a popup appear in a user's browser, so the prompt deliberately asks the backend scheduler to create the reminder state and the browser to poll for it via `fetch()` and display the Bootstrap modal. This makes the design much more realistic for a live deployment.
